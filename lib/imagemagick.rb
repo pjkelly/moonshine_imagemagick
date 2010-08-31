@@ -5,9 +5,8 @@ module Imagemagick
   #
   #   configure(:imagemagick => {:foo => true})
   #
-  # Then include the plugin and call the recipe(s) you need:
+  # Then call the recipe:
   #
-  #  plugin :imagemagick
   #  recipe :imagemagick
   def imagemagick(options = {})
     %w(
@@ -15,7 +14,22 @@ module Imagemagick
       libmagick9-dev
     ).each do |p|
       package p, :ensure => :installed, :before => exec('rails_gems')
+      symlink_to_local if options[:symlink_to_local]
     end
   end
-  
+
+  protected
+
+  def symlink_to_local
+    ['convert', 'identify'].each do |im_command|
+      exec "symlink_#{im_command}", {
+        :command => "ln -nfs /usr/bin/#{im_command} /usr/local/bin/#{im_command}",
+        :unless => "ls -al /usr/local/bin | grep #{im_command}",
+        :require => [
+          package("imagemagick"),
+          package("libmagick9-dev")
+        ]
+      }
+    end
+  end
 end
